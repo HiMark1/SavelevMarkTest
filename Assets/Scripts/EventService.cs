@@ -7,13 +7,13 @@ using UnityEngine.Networking;
 [System.Serializable]
 public class EventData
 {
-    public string type;
-    public string data;
+    public string Type;
+    public string Data;
 }
 [System.Serializable]
 public class EventList
 {
-    public List<EventData> events;
+    public List<EventData> Events;
 }
 public class EventService : MonoBehaviour
 {
@@ -48,7 +48,7 @@ public class EventService : MonoBehaviour
     public void TrackEvent(string type, string data)
     {
         // Add event to queue
-        eventQueue.Add(new EventData { type = type, data = data });
+        eventQueue.Add(new EventData { Type = type, Data = data });
 
         if (!isCooldownActive)
         {
@@ -75,7 +75,7 @@ public class EventService : MonoBehaviour
     private void SendEvents()
     {
         // Generate JSON with events
-        EventList eventList = new EventList { events = eventQueue };
+        EventList eventList = new EventList { Events = eventQueue };
 
         string json = JsonUtility.ToJson(eventList);
         StartCoroutine(SendJson(json));
@@ -84,8 +84,9 @@ public class EventService : MonoBehaviour
 
     private IEnumerator SendJson(string json)
     {
-        UnityWebRequest request = null;
         Debug.Log("JSON sent: " + json);
+        PlayerPrefs.SetString("EventData", json);
+        PlayerPrefs.Save();
 
         if (string.IsNullOrWhiteSpace(json))
         {
@@ -93,21 +94,15 @@ public class EventService : MonoBehaviour
             yield return null;
         }
 
-        try
-        {
-            request = new(serverUrl, "POST");
+        using UnityWebRequest request = new(serverUrl, "POST");
 
-            byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
+        byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
 
-            request.uploadHandler = new UploadHandlerRaw(bodyRaw);
-            request.downloadHandler = new DownloadHandlerBuffer();
+        request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+        request.downloadHandler = new DownloadHandlerBuffer();
 
-            request.SetRequestHeader("Content-Type", "application/json");
-        }
-        catch
-        {
-            PlayerPrefs.SetString("EventData", json);
-        }
+        request.SetRequestHeader("Content-Type", "application/json");
+
 
         // Sending a request
         yield return request.SendWebRequest();
@@ -122,9 +117,6 @@ public class EventService : MonoBehaviour
         else
         {
             Debug.LogError("Error sending events: " + request.error);
-            PlayerPrefs.SetString("EventData", json);
-            PlayerPrefs.Save();
-
         }
     }
 }
